@@ -19,8 +19,12 @@ export type HerramientaCatalogo = {
    */
   usoPedagogico?: string;
   url?: string;
+  /** Logo o imagen desde el API (ruta absoluta o relativa a la API). */
+  imagenUrl?: string;
   compatibilidadId?: string;
   compatibilidadIds?: string[];
+  /** Nombres de funciones principales (para búsqueda y detalle). */
+  funcionesPrincipales?: string[];
 };
 
 export type CategoriaCatalogo = {

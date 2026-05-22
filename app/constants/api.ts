@@ -45,7 +45,8 @@ export function getApiBaseUrl(): string {
   const expo = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (expo) return stripTrailingSlash(expo);
 
-  return "http://10.228.210.160:3002";
+  // return "http://10.228.210.160:3002";
+  return "http://10.228.210.160:8000";
 // return "http://localhost:3002";
 }
 
@@ -56,28 +57,25 @@ export function getApiBaseUrlLabel(): string {
 
 /**
  * Rutas del catálogo respecto al host (sin duplicar el prefijo en `NEXT_PUBLIC_API_URL`).
- * Por defecto incluyen el prefijo `api` → `/api/categorias`, `/api/herramientas`.
+ * Django (`api_Catalogo_IA`): prefijo `api` + recurso en PascalCase con barra final.
  */
 export const API_ROUTES = {
   get categorias() {
-    return apiPath("/categorias");
+    return apiPath("/Categoria/");
   },
   get compatibilidades() {
-    return apiPath("/compatibilidades");
+    return apiPath("/Compatibilidad/");
   },
-  /** Nest: `@Controller('funciones-principales')` + prefijo global `api`. */
   get funcionesPrincipales() {
-    return apiPath("/funciones-principales");
+    return apiPath("/FuncionesPrincipales/");
   },
-  /** Nest: `@Controller('niveles-educativos')`. */
   get nivelesEducativos() {
-    return apiPath("/niveles-educativos");
+    return apiPath("/NivelEducativo/");
   },
-  /** Nest: `@Controller('tipos-uso')`. */
   get tiposUso() {
-    return apiPath("/tipos-uso");
+    return apiPath("/TipoUso/");
   },
   get herramientas() {
-    return apiPath("/herramientas");
+    return apiPath("/Herramienta/");
   },
 } as const;

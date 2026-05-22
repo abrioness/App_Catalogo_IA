@@ -54,12 +54,12 @@ export function CatalogHeader({
       <h1 className="text-lg font-semibold tracking-tight">Catálogo IA</h1>
       <div className="flex items-center gap-2 sm:gap-3">
         <CatalogSyncControls />
-        {/* <Link
+        <Link
           href="/crear"
           className="rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white/95 ring-1 ring-white/40 transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Alta
-        </Link> */}
+        </Link>
         <Link
           href="/"
           className="rounded-md p-1.5 transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"

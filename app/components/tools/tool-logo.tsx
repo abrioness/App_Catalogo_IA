@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { HerramientaCatalogo } from "@/lib/types/herramienta";
 
 function LogoDeepSeek() {
@@ -43,10 +46,45 @@ function faviconSrcDesdeUrl(url?: string): string | null {
   }
 }
 
+function ImagenHerramienta({ src, nombre }: { src: string; nombre: string }) {
+  const [fallo, setFallo] = useState(false);
+  if (fallo) return <LogoGenerico nombre={nombre} />;
+  return (
+    <div
+      className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-neutral-200"
+      aria-hidden
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        width={44}
+        height={44}
+        className="h-full w-full object-cover"
+        loading="lazy"
+        onError={() => setFallo(true)}
+      />
+      <span className="sr-only">{nombre}</span>
+    </div>
+  );
+}
+
 export function ToolLogo({ herramienta }: { herramienta: HerramientaCatalogo }) {
-  if (herramienta.id === "deepseek") {
+  const nombreClave = herramienta.nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  if (herramienta.id === "deepseek" || nombreClave === "deepseek") {
     return <LogoDeepSeek />;
   }
+
+  if (herramienta.imagenUrl) {
+    return (
+      <ImagenHerramienta src={herramienta.imagenUrl} nombre={herramienta.nombre} />
+    );
+  }
+
   const favicon = faviconSrcDesdeUrl(herramienta.url);
   if (favicon) {
     return (
@@ -66,5 +104,6 @@ export function ToolLogo({ herramienta }: { herramienta: HerramientaCatalogo }) 
       </div>
     );
   }
+
   return <LogoGenerico nombre={herramienta.nombre} />;
 }

@@ -11,8 +11,10 @@ import {
 import { getOfflineMeta } from "@/lib/offline/catalog-db";
 import {
   hayDatosOfflineMinimos,
+  limpiarCacheOffline,
   sincronizarCatalogosCompletos,
 } from "@/lib/offline/sync-catalogos";
+import { clearUserProfile } from "@/lib/user-profile";
 
 const SYNCED_EVENT = "catalogo-offline-synced";
 
@@ -25,10 +27,16 @@ function emitCatalogoSynced() {
 type OfflineCatalogContextValue = {
   online: boolean;
   syncing: boolean;
+  clearing: boolean;
   lastSyncedAt: string | null;
   lastSyncError: string | null;
   /** Devuelve true si la sincronización terminó bien. */
   syncNow: () => Promise<boolean>;
+  /**
+   * Borra IndexedDB y, si hay conexión, vuelve a descargar el catálogo.
+   * Devuelve true si la resincronización terminó bien (o no era necesaria).
+   */
+  clearLocalAndResync: () => Promise<boolean>;
   refreshMeta: () => Promise<void>;
 };
 
@@ -47,6 +55,7 @@ export function OfflineCatalogProvider({
    */
   const [online, setOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
 
@@ -112,16 +121,63 @@ export function OfflineCatalogProvider({
     return false;
   }, []);
 
+  const clearLocalAndResync = useCallback(async () => {
+    setLastSyncError(null);
+    setClearing(true);
+    try {
+      await limpiarCacheOffline();
+      clearUserProfile();
+      setLastSyncedAt(null);
+      emitCatalogoSynced();
+
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        setSyncing(true);
+        const r = await sincronizarCatalogosCompletos();
+        setSyncing(false);
+        if (r.ok) {
+          setLastSyncedAt(r.lastSyncedAt);
+          emitCatalogoSynced();
+        } else {
+          setLastSyncError(r.error);
+        }
+        return true;
+      }
+
+      setLastSyncError(
+        "Copia local eliminada. Conéctate a internet y pulsa «Actualizar» para descargar de nuevo.",
+      );
+      return true;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo limpiar la base local.";
+      setLastSyncError(msg);
+      return false;
+    } finally {
+      setClearing(false);
+      setSyncing(false);
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       online,
       syncing,
+      clearing,
       lastSyncedAt,
       lastSyncError,
       syncNow,
+      clearLocalAndResync,
       refreshMeta,
     }),
-    [online, syncing, lastSyncedAt, lastSyncError, syncNow, refreshMeta],
+    [
+      online,
+      syncing,
+      clearing,
+      lastSyncedAt,
+      lastSyncError,
+      syncNow,
+      clearLocalAndResync,
+      refreshMeta,
+    ],
   );
 
   return (

@@ -11,6 +11,7 @@ import {
 import type { CategoriaCatalogo, HerramientaCatalogo } from "@/lib/types/herramienta";
 import {
   CACHE_KEYS,
+  eliminarBaseDatosOffline,
   getOfflineMeta,
   idbGet,
   idbSet,
@@ -105,6 +106,12 @@ export async function leerCompatibilidadesCache(): Promise<CatalogoOpcion[]> {
   return Array.isArray(v) ? v : [];
 }
 
+export async function leerNivelesEducativosCache(): Promise<CatalogoOpcion[]> {
+  if (!isIndexedDbAvailable()) return [];
+  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.nivelesEducativos);
+  return Array.isArray(v) ? v : [];
+}
+
 export async function leerHerramientasCache(): Promise<HerramientaCatalogo[]> {
   if (!isIndexedDbAvailable()) return [];
   const v = await idbGet<HerramientaCatalogo[]>(CACHE_KEYS.herramientas);
@@ -116,4 +123,12 @@ export async function hayDatosOfflineMinimos(): Promise<boolean> {
   if (!meta?.lastSyncedAt) return false;
   const h = await leerHerramientasCache();
   return h.length > 0;
+}
+
+/** Borra la copia local (IndexedDB) del catálogo y herramientas. */
+export async function limpiarCacheOffline(): Promise<void> {
+  if (!isIndexedDbAvailable()) {
+    throw new Error("IndexedDB no está disponible en este entorno.");
+  }
+  await eliminarBaseDatosOffline();
 }

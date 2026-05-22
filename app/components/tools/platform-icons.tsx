@@ -65,12 +65,24 @@ export function PlataformasLista({ plataformas }: { plataformas: Plataforma[] })
     ios: "iOS",
   };
 
+  if (plataformas.length === 0) {
+    return (
+      <p className="text-xs text-neutral-500" role="status">
+        Compatibilidad no indicada en el catálogo.
+      </p>
+    );
+  }
+
   return (
     <ul className="flex flex-wrap items-center gap-3" aria-label="Plataformas disponibles">
       {plataformas.map((p) => (
-        <li key={p} className="flex items-center gap-1.5 text-neutral-600" title={labels[p]}>
+        <li
+          key={p}
+          className="flex items-center gap-1.5 text-neutral-600"
+          title={labels[p]}
+        >
           {MAP[p]}
-          <span className="sr-only">{labels[p]}</span>
+          <span className="text-xs font-medium text-neutral-600">{labels[p]}</span>
         </li>
       ))}
     </ul>

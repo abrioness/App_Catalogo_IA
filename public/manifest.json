@@ -3,7 +3,7 @@
   "short_name": "Catálogo IA",
   "description": "Catálogo de herramientas de inteligencia artificial",
   "lang": "es",
-  "start_url": "/",
+  "start_url": "/Herramienta",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",

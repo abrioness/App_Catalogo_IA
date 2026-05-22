@@ -72,3 +72,22 @@ export async function getOfflineMeta(): Promise<OfflineCacheMeta | null> {
 export function isIndexedDbAvailable(): boolean {
   return typeof window !== "undefined" && typeof indexedDB !== "undefined";
 }
+
+/** Elimina toda la base IndexedDB del catálogo offline. */
+export async function eliminarBaseDatosOffline(): Promise<void> {
+  if (!isIndexedDbAvailable()) {
+    throw new Error("IndexedDB no está disponible en este entorno.");
+  }
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error ?? new Error("No se pudo eliminar la base local."));
+    req.onblocked = () => {
+      reject(
+        new Error(
+          "La base local está en uso. Cierra otras pestañas de la app e inténtalo de nuevo.",
+        ),
+      );
+    };
+  });
+}

@@ -4,6 +4,7 @@ import axios, {
   type AxiosInstance,
   type InternalAxiosRequestConfig,
 } from "axios";
+import { enriquecerHerramientasCatalogo } from "@/lib/enriquecer-herramientas-catalogo";
 import type {
   CategoriaCatalogo,
   HerramientaCatalogo,
@@ -11,7 +12,12 @@ import type {
   Plataforma,
 } from "../../lib/types/herramienta";
 import type { TblCatCategoriaApi } from "../../lib/types/categoria-api";
-import { API_ROUTES, getApiBaseUrl, getApiBaseUrlLabel } from "../constants/api";
+import {
+  API_ROUTES,
+  apiPath,
+  getApiBaseUrl,
+  getApiBaseUrlLabel,
+} from "../constants/api";
 import { getToken } from "./auth";
 
 /** Valor por defecto de `usuarioRegistro` en altas desde el formulario. */
@@ -39,16 +45,24 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-/** Respuesta en arreglo plano o envuelta en `{ data: T[] }` (común en Nest). */
+/** Respuesta en arreglo plano, `{ data }`, `{ results }` (Django REST) u objeto único. */
 function asArray<T>(body: unknown): T[] {
   if (Array.isArray(body)) return body as T[];
-  if (
-    body &&
-    typeof body === "object" &&
-    "data" in body &&
-    Array.isArray((body as { data: unknown }).data)
-  ) {
-    return (body as { data: T[] }).data;
+  if (body && typeof body === "object") {
+    const o = body as Record<string, unknown>;
+    for (const key of ["data", "results", "items", "herramientas"] as const) {
+      const v = o[key];
+      if (Array.isArray(v)) return v as T[];
+    }
+    /** Un solo registro envuelto como objeto (no array). */
+    if (
+      o.id != null ||
+      o.idHerramienta != null ||
+      o.IdHerramienta != null ||
+      o.id_herramienta != null
+    ) {
+      return [body as T];
+    }
   }
   return [];
 }
@@ -140,8 +154,14 @@ export type CompatibilidadOpcion = CatalogoOpcion;
 function compatibilidadDesdeApi(raw: unknown): CatalogoOpcion | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
-  const id = o.idCompatibilidad ?? o.IdCompatibilidad;
-  const nombre = o.nombreCompatibilidad ?? o.NombreCompatibilidad;
+  const id =
+    o.idCompatibilidad ?? o.IdCompatibilidad ?? o.id_compatibilidad ?? o.id ?? o.pk;
+  const nombre =
+    o.nombreCompatibilidad ??
+    o.NombreCompatibilidad ??
+    o.nombre_compatibilidad ??
+    o.nombre ??
+    o.Nombre;
   if (id == null || nombre == null) return null;
   const idStr = String(id).trim();
   const nom = String(nombre).trim();
@@ -163,8 +183,9 @@ export async function listarCompatibilidad(): Promise<CatalogoOpcion[]> {
 function funcionDesdeApi(raw: unknown): CatalogoOpcion | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
-  const id = o.idFunciones ?? o.IdFunciones;
-  const nombre = o.funcionesPrincipales ?? o.FuncionesPrincipales;
+  const id = o.idFunciones ?? o.IdFunciones ?? o.id_funciones ?? o.id ?? o.pk;
+  const nombre =
+    o.funcionesPrincipales ?? o.FuncionesPrincipales ?? o.funciones_principales;
   if (id == null || nombre == null) return null;
   const nom = String(nombre).trim();
   if (!nom) return null;
@@ -185,8 +206,9 @@ export async function listarFuncionesPrincipales(): Promise<CatalogoOpcion[]> {
 function nivelDesdeApi(raw: unknown): CatalogoOpcion | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
-  const id = o.idNivelEducativo ?? o.IdNivelEducativo;
-  const nombre = o.nivelEducativo ?? o.NivelEducativo;
+  const id =
+    o.idNivelEducativo ?? o.IdNivelEducativo ?? o.id_nivel_educativo ?? o.id ?? o.pk;
+  const nombre = o.nivelEducativo ?? o.NivelEducativo ?? o.nivel_educativo;
   if (id == null || nombre == null) return null;
   const nom = String(nombre).trim();
   if (!nom) return null;
@@ -301,33 +323,111 @@ function asNiveles(v: unknown): string[] {
   return [];
 }
 
+function idDesdeValor(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === "number" || typeof v === "string") {
+    const s = String(v).trim();
+    return s || null;
+  }
+  if (typeof v === "object" && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    for (const key of [
+      "id",
+      "pk",
+      "idCategoria",
+      "IdCategoria",
+      "id_categoria",
+      "idCompatibilidad",
+      "IdCompatibilidad",
+      "id_compatibilidad",
+      "idHerramienta",
+      "IdHerramienta",
+      "id_herramienta",
+    ] as const) {
+      const nested = idDesdeValor(o[key]);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function idsDesdeListaRelacion(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const ids: string[] = [];
+  for (const item of v) {
+    const id = idDesdeValor(item);
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
+function resolverUrlAbsoluta(raw: unknown): string | undefined {
+  if (raw == null) return undefined;
+  const t = String(raw).trim();
+  if (!t) return undefined;
+  if (/^https?:\/\//i.test(t)) return t;
+  const base = getApiBaseUrl();
+  return `${base}${t.startsWith("/") ? "" : "/"}${t}`;
+}
+
 function categoriaIdDesdeApi(r: Record<string, unknown>): string {
   const flat =
-    r.categoriaId ?? r.idCategoriaHerramienta ?? r.IdCategoriaHerramienta;
-  if (flat != null && typeof flat !== "object") return String(flat);
+    r.categoriaId ??
+    r.idCategoriaHerramienta ??
+    r.IdCategoriaHerramienta ??
+    r.id_categoria;
+  const idFlat = idDesdeValor(flat);
+  if (idFlat) return idFlat;
+
+  const catScalar = r.categoria ?? r.Categoria;
+  const idCat = idDesdeValor(catScalar);
+  if (idCat) return idCat;
+
+  const detail =
+    r.categoria_detail ??
+    r.categoriaDetail ??
+    r.CategoriaDetail ??
+    r.tblCatCategoria ??
+    r.TblCatCategoria;
+  const idDetail = idDesdeValor(detail);
+  if (idDetail) return idDetail;
+
   const many = r.tblCatCategorias ?? r.TblCatCategorias;
-  if (Array.isArray(many) && many[0] && typeof many[0] === "object") {
-    const o = many[0] as Record<string, unknown>;
-    const id = o.idCategoria ?? o.IdCategoria;
-    if (id != null) return String(id);
-  }
-  const nest = r.idCategoria ?? r.IdCategoria;
-  // Algunas respuestas devuelven idCategoria como escalar (no relación objeto).
-  if (nest != null && typeof nest !== "object") {
-    const id = String(nest).trim();
+  if (Array.isArray(many) && many[0]) {
+    const id = idDesdeValor(many[0]);
     if (id) return id;
   }
-  if (nest && typeof nest === "object") {
-    const o = nest as Record<string, unknown>;
-    const id = o.idCategoria ?? o.IdCategoria;
-    if (id != null) return String(id);
-  }
-  return "";
+
+  const nest = r.idCategoria ?? r.IdCategoria;
+  const idNest = idDesdeValor(nest);
+  return idNest ?? "";
 }
 
 function categoriaNombreDesdeApi(r: Record<string, unknown>): string {
-  const flat = r.categoriaNombre ?? r.nombreCategoria ?? r.NombreCategoria;
+  const flat =
+    r.categoriaNombre ??
+    r.nombreCategoria ??
+    r.NombreCategoria ??
+    r.nombre_categoria;
   if (typeof flat === "string" && flat.trim()) return flat.trim();
+
+  const detail =
+    r.categoria_detail ??
+    r.categoriaDetail ??
+    r.CategoriaDetail ??
+    r.tblCatCategoria ??
+    r.TblCatCategoria;
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    const o = detail as Record<string, unknown>;
+    const n =
+      o.nombreCategoria ??
+      o.NombreCategoria ??
+      o.nombre_categoria ??
+      o.nombre ??
+      o.Nombre;
+    if (n != null) return String(n).trim();
+  }
+
   const many = r.tblCatCategorias ?? r.TblCatCategorias;
   if (Array.isArray(many) && many[0] && typeof many[0] === "object") {
     const o = many[0] as Record<string, unknown>;
@@ -335,7 +435,7 @@ function categoriaNombreDesdeApi(r: Record<string, unknown>): string {
       o.nombreCategoria ?? o.NombreCategoria ?? o.nombre ?? o.Nombre;
     if (n != null) return String(n).trim();
   }
-  const nest = r.idCategoria ?? r.IdCategoria;
+  const nest = r.idCategoria ?? r.IdCategoria ?? r.categoria ?? r.Categoria;
   if (nest && typeof nest === "object") {
     const o = nest as Record<string, unknown>;
     const n =
@@ -363,48 +463,78 @@ function nivelesDesdeApi(r: Record<string, unknown>): string[] {
   return names.filter(Boolean);
 }
 
+function funcionesPrincipalesNombresDesdeApi(
+  r: Record<string, unknown>,
+): string[] {
+  const nombres: string[] = [];
+  const pushNombre = (v: unknown) => {
+    if (v != null && String(v).trim()) nombres.push(String(v).trim());
+  };
+
+  const fk = r.idFunciones ?? r.IdFunciones ?? r.id_funciones;
+  if (fk && typeof fk === "object") {
+    const o = fk as Record<string, unknown>;
+    pushNombre(o.funcionesPrincipales ?? o.FuncionesPrincipales);
+  }
+
+  const listas = [
+    r.funcionesPrincipales,
+    r.FuncionesPrincipales,
+    r.funciones,
+    r.Funciones,
+    r.idsFunciones,
+    r.IdsFunciones,
+    r.tblCatFuncionesPrincipales,
+    r.TblCatFuncionesPrincipales,
+  ];
+  for (const lista of listas) {
+    if (!Array.isArray(lista)) continue;
+    for (const row of lista) {
+      if (typeof row === "string") pushNombre(row);
+      else if (row && typeof row === "object") {
+        const o = row as Record<string, unknown>;
+        pushNombre(
+          o.funcionesPrincipales ??
+            o.FuncionesPrincipales ??
+            o.nombre ??
+            o.Nombre,
+        );
+      }
+    }
+  }
+  return [...new Set(nombres)];
+}
+
 function funcionPedagogicaDesdeApi(r: Record<string, unknown>): string {
   const direct = r.funcionPedagogica ?? r.FuncionPedagogica;
   if (typeof direct === "string" && direct.trim()) return direct.trim();
-  const fk = r.idFunciones ?? r.IdFunciones;
-  if (fk && typeof fk === "object") {
-    const o = fk as Record<string, unknown>;
-    const t = o.funcionesPrincipales ?? o.FuncionesPrincipales;
-    if (t != null) return String(t).trim();
-  }
-  const many = r.tblCatFuncionesPrincipales ?? r.TblCatFuncionesPrincipales;
-  if (Array.isArray(many)) {
-    const nombres: string[] = [];
-    for (const row of many) {
-      if (row && typeof row === "object") {
-        const o = row as Record<string, unknown>;
-        const t = o.funcionesPrincipales ?? o.FuncionesPrincipales;
-        if (t != null && String(t).trim()) nombres.push(String(t).trim());
-      }
-    }
-    if (nombres.length > 0) return nombres.map((n) => `• ${n}`).join("\n");
-  }
+  const nombres = funcionesPrincipalesNombresDesdeApi(r);
+  if (nombres.length > 0) return nombres.map((n) => `• ${n}`).join("\n");
   return "";
 }
 
 function compatibilidadIdsDesdeApi(r: Record<string, unknown>): string[] {
   const ids = new Set<string>();
-  const fk = r.idCompatibilidad ?? r.IdCompatibilidad;
-  if (fk && typeof fk === "object") {
-    const o = fk as Record<string, unknown>;
-    const id = o.idCompatibilidad ?? o.IdCompatibilidad;
-    if (id != null && String(id).trim()) ids.add(String(id).trim());
-  }
-  const many = r.tblCatCompatibilidads ?? r.TblCatCompatibilidads;
-  if (Array.isArray(many)) {
-    for (const row of many) {
-      if (row && typeof row === "object") {
-        const o = row as Record<string, unknown>;
-        const id = o.idCompatibilidad ?? o.IdCompatibilidad;
-        if (id != null && String(id).trim()) ids.add(String(id).trim());
-      }
+
+  const fk = r.idCompatibilidad ?? r.IdCompatibilidad ?? r.id_compatibilidad;
+  const idFk = idDesdeValor(fk);
+  if (idFk) ids.add(idFk);
+
+  const listas = [
+    r.compatibilidades,
+    r.Compatibilidades,
+    r.idsCompatibilidad,
+    r.IdsCompatibilidad,
+    r.tblCatCompatibilidads,
+    r.TblCatCompatibilidads,
+    r.tbl_cat_compatibilidad,
+  ];
+  for (const lista of listas) {
+    for (const id of idsDesdeListaRelacion(lista)) {
+      ids.add(id);
     }
   }
+
   return [...ids];
 }
 
@@ -456,8 +586,17 @@ function plataformasDesdeCompatibilidad(nombres: string[]): Plataforma[] {
 function extraerFilaHerramienta(body: unknown): Record<string, unknown> | null {
   if (body == null || typeof body !== "object") return null;
   const looksLike = (r: Record<string, unknown>): boolean => {
-    const id = r.id ?? r.idHerramienta ?? r.IdHerramienta;
-    const nom = r.nombre ?? r.nombreHerramienta ?? r.NombreHerramienta;
+    const id =
+      r.id ??
+      r.idHerramienta ??
+      r.IdHerramienta ??
+      r.id_herramienta ??
+      r.pk;
+    const nom =
+      r.nombre ??
+      r.nombreHerramienta ??
+      r.NombreHerramienta ??
+      r.nombre_herramienta;
     return (
       id != null &&
       String(id).trim() !== "" &&
@@ -497,20 +636,43 @@ export function normalizarHerramientaApi(raw: unknown): HerramientaCatalogo | nu
     return normalizarHerramientaApi(raw[0]);
   }
   const r = raw as Record<string, unknown>;
-  const id = r.id ?? r.idHerramienta ?? r.IdHerramienta;
-  const nombre = r.nombre ?? r.nombreHerramienta ?? r.NombreHerramienta;
+  const id =
+    r.id ?? r.idHerramienta ?? r.IdHerramienta ?? r.id_herramienta ?? r.pk;
+  const nombre =
+    r.nombre ?? r.nombreHerramienta ?? r.NombreHerramienta ?? r.nombre_herramienta;
   if (id == null || nombre == null) return null;
   const categoriaId = categoriaIdDesdeApi(r);
   const categoriaNombre = categoriaNombreDesdeApi(r) || "—";
   const compatibilidadIds = compatibilidadIdsDesdeApi(r);
   const compatibilidadNombres = compatibilidadNombresDesdeApi(r);
+  const funcionesPrincipales = funcionesPrincipalesNombresDesdeApi(r);
   const plataformasDirectas = asPlataformas(r.plataformas ?? r.Plataformas);
   const plataformas =
     plataformasDirectas.length > 0
       ? plataformasDirectas
       : plataformasDesdeCompatibilidad(compatibilidadNombres);
   const compatibilidadId = compatibilidadIds[0];
-  const urlRaw = r.url ?? r.Url;
+  const urlRaw =
+    r.URL ??
+    r.url ??
+    r.Url ??
+    r.link ??
+    r.Link ??
+    r.sitioWeb ??
+    r.SitioWeb ??
+    r.paginaWeb ??
+    r.PaginaWeb;
+  const imagenRaw =
+    r.imagenUrl ??
+    r.ImagenUrl ??
+    r.imagen ??
+    r.Imagen ??
+    r.logo ??
+    r.Logo ??
+    r.icono ??
+    r.Icono ??
+    r.foto ??
+    r.Foto;
   return {
     id: String(id),
     nombre: String(nombre).trim(),
@@ -531,15 +693,14 @@ export function normalizarHerramientaApi(raw: unknown): HerramientaCatalogo | nu
       r.usoPedagogico != null || r.UsoPedagogico != null
         ? String(r.usoPedagogico ?? r.UsoPedagogico).trim() || undefined
         : undefined,
-    url:
-      urlRaw != null && String(urlRaw).trim()
-        ? String(urlRaw).trim()
-        : undefined,
+    url: resolverUrlAbsoluta(urlRaw),
+    imagenUrl: resolverUrlAbsoluta(imagenRaw),
     descripcionPedagogica:
       r.descripcionPedagogica != null || r.DescripcionPedagogica != null
         ? String(r.descripcionPedagogica ?? r.DescripcionPedagogica).trim() ||
           undefined
         : undefined,
+    ...(funcionesPrincipales.length ? { funcionesPrincipales } : {}),
     ...(compatibilidadIds.length
       ? { compatibilidadId, compatibilidadIds }
       : {}),
@@ -552,23 +713,76 @@ export type ListarHerramientasParams = {
   q?: string;
 };
 
+/** Matriz herramienta → compatibilidades (si el backend expone la tabla intermedia). */
+export async function listarMatrizHerramientaCompatibilidad(): Promise<
+  Map<string, string[]>
+> {
+  const map = new Map<string, string[]>();
+  const rutas = [
+    apiPath("/HerramientaCompatibilidad/"),
+    apiPath("/TblHerramientaCompatibilidad/"),
+    apiPath("/Herramienta_Compatibilidad/"),
+  ];
+
+  for (const ruta of rutas) {
+    try {
+      const { data } = await apiClient.get<unknown>(ruta);
+      const arr = asArray<unknown>(data);
+      if (arr.length === 0) continue;
+
+      for (const row of arr) {
+        if (!row || typeof row !== "object") continue;
+        const o = row as Record<string, unknown>;
+        const hId = idDesdeValor(
+          o.IdHerramienta ?? o.idHerramienta ?? o.Herramienta ?? o.herramienta,
+        );
+        const cId = idDesdeValor(
+          o.IdCompatibilidad ??
+            o.idCompatibilidad ??
+            o.Compatibilidad ??
+            o.compatibilidad,
+        );
+        if (!hId || !cId) continue;
+        const prev = map.get(hId) ?? [];
+        if (!prev.includes(cId)) prev.push(cId);
+        map.set(hId, prev);
+      }
+      if (map.size > 0) return map;
+    } catch {
+      /* probar siguiente ruta */
+    }
+  }
+  return map;
+}
+
 export async function listarHerramientas(
   params?: ListarHerramientasParams,
 ): Promise<HerramientaCatalogo[]> {
-  const { data } = await apiClient.get<unknown>(API_ROUTES.herramientas, {
-    params: {
-      categoriaId: params?.categoriaId || undefined,
-      compatibilidadId: params?.compatibilidadId || undefined,
-      q: params?.q?.trim() || undefined,
-    },
-  });
+  const [{ data }, categorias, compatibilidades, matrizCompat] = await Promise.all([
+    apiClient.get<unknown>(API_ROUTES.herramientas, {
+      params: {
+        categoriaId: params?.categoriaId || undefined,
+        compatibilidadId: params?.compatibilidadId || undefined,
+        q: params?.q?.trim() || undefined,
+      },
+    }),
+    listarCategorias(),
+    listarCompatibilidad(),
+    listarMatrizHerramientaCompatibilidad(),
+  ]);
+
   const arr = asArray<unknown>(data);
   const out: HerramientaCatalogo[] = [];
   for (const item of arr) {
     const h = normalizarHerramientaApi(extraerFilaHerramienta(item) ?? item);
     if (h) out.push(h);
   }
-  return out;
+  return enriquecerHerramientasCatalogo(
+    out,
+    categorias,
+    compatibilidades,
+    matrizCompat,
+  );
 }
 
 export async function obtenerHerramienta(
@@ -878,11 +1092,28 @@ function mensajeApiCompleto(d: unknown): string | null {
 const hintTextoLargo =
   " Si el mensaje repite lo que escribiste, suele ser un límite de longitud (p. ej. descripción corta) o un nombre de campo distinto al que espera tu DTO en Nest.";
 
+function respuestaPareceHtml(data: unknown): boolean {
+  if (typeof data !== "string") return false;
+  const t = data.trim();
+  return t.startsWith("<!DOCTYPE") || t.startsWith("<html") || /<\/html>/i.test(t);
+}
+
+/** Registra en consola sin mostrar HTML crudo en mensajes largos. */
+export function logErrorApi(contexto: string, err: unknown): void {
+  console.error(`[${contexto}]`, formatearErrorApi(err));
+}
+
 export function formatearErrorApi(err: unknown): string {
   if (isAxiosError(err)) {
     if (err.response) {
       const d = err.response.data;
       const status = err.response.status;
+      if (respuestaPareceHtml(d)) {
+        const url = err.config?.url ?? err.response.config?.url;
+        return url
+          ? `Recurso no encontrado o respuesta inválida (HTTP ${status}): ${url}`
+          : `Recurso no encontrado o respuesta inválida (HTTP ${status})`;
+      }
       const texto = mensajeApiCompleto(d);
       if (texto) {
         const largo = texto.length > 200;
@@ -893,7 +1124,7 @@ export function formatearErrorApi(err: unknown): string {
         return `${base} (HTTP ${status})`;
       }
       if (typeof d === "string") {
-        const base = d.length > 80 ? d + hintTextoLargo : d;
+        const base = d.length > 80 ? d.slice(0, 80) + "…" : d;
         return `${base} (HTTP ${status})`;
       }
       try {

@@ -43,9 +43,13 @@ export function ToolCard({ herramienta }: { herramienta: HerramientaCatalogo }) 
             </h3>
             <BadgePrecio precio={herramienta.precio} />
           </div>
-          <p className="mt-2 inline-block rounded-full bg-pink-50 px-2.5 py-0.5 text-xs font-medium text-[#ad1457] ring-1 ring-pink-100">
-            {herramienta.categoriaNombre}
-          </p>
+          {herramienta.categoriaNombre &&
+          herramienta.categoriaNombre !== "—" &&
+          herramienta.categoriaNombre !== "Sin categoría" ? (
+            <p className="mt-2 inline-block rounded-full bg-pink-50 px-2.5 py-0.5 text-xs font-medium text-[#ad1457] ring-1 ring-pink-100">
+              {herramienta.categoriaNombre}
+            </p>
+          ) : null}
         </div>
       </div>
 
