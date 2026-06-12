@@ -1,3 +1,5 @@
+import { create } from "domain";
+
 /**
  * URL base del backend (p. ej. Nest + PostgreSQL).
  *
@@ -46,8 +48,8 @@ export function getApiBaseUrl(): string {
   if (expo) return stripTrailingSlash(expo);
 
   // return "http://10.228.210.160:3002";
-  return "http://10.228.210.160:8000";
-// return "http://localhost:3002";
+  // return "http://10.228.210.160:8000";
+return "http://localhost:8000";
 }
 
 /** Misma URL que `getApiBaseUrl()`; útil para mostrarla en mensajes de error. */
@@ -60,6 +62,8 @@ export function getApiBaseUrlLabel(): string {
  * Django (`api_Catalogo_IA`): prefijo `api` + recurso en PascalCase con barra final.
  */
 export const API_ROUTES = {
+ 
+  
   get categorias() {
     return apiPath("/Categoria/");
   },
@@ -78,4 +82,25 @@ export const API_ROUTES = {
   get herramientas() {
     return apiPath("/Herramienta/");
   },
+  get sexo() {
+    return apiPath("/Sexo/");
+  },
+  get etario() {
+    return apiPath("/Etario/");
+  },
+  get zona() {
+    return apiPath("/Zona/");
+  },
+  get region() {
+    return apiPath("/Region/");
+  },
+  get municipio() {
+    return apiPath("/Municipio/");
+  },
+  get estadistica() {
+    return apiPath("/Estadistica");
+  },
+    
+
+  
 } as const;

@@ -13,6 +13,11 @@ export const CACHE_KEYS = {
   compatibilidades: "compatibilidades",
   funcionesPrincipales: "funcionesPrincipales",
   nivelesEducativos: "nivelesEducativos",
+  sexo: "sexo",
+  zona:"zona",
+  etario:"etario",
+  region:"region",
+  municipio:"municipio",
   tiposUso: "tiposUso",
   herramientas: "herramientas",
 } as const;

@@ -4,15 +4,15 @@
  */
 
 export type UserProfile = {
-  nivelAcademicoId: string;
+  nivelAcademicoId: number;
   nivelAcademicoNombre: string;
-  sexoId: string;
+  sexoId: number;
   sexoNombre: string;
-  grupoEtarioId: string;
+  grupoEtarioId: number;
   grupoEtarioNombre: string;
-  municipioId: string;
+  municipioId: number;
   municipioNombre: string;
-  zonaRegionId: string;
+  zonaRegionId: number;
   zonaRegionNombre: string;
   completedAt: string;
 };
@@ -28,11 +28,11 @@ function isBrowser(): boolean {
 
 function profileTieneCamposRequeridos(p: UserProfile): boolean {
   return Boolean(
-    p.nivelAcademicoId?.trim() &&
-      p.sexoId?.trim() &&
-      p.grupoEtarioId?.trim() &&
-      p.municipioId?.trim() &&
-      p.zonaRegionId?.trim(),
+    p.nivelAcademicoId &&
+      p.sexoId &&
+      p.grupoEtarioId &&
+      p.municipioId &&
+      p.zonaRegionId,
   );
 }
 
@@ -62,6 +62,7 @@ export function saveUserProfile(profile: Omit<UserProfile, "completedAt">): void
   if (!profileTieneCamposRequeridos(full)) {
     throw new Error("Completa todos los campos del perfil.");
   }
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
 }
 

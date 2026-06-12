@@ -2,18 +2,26 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
+  crearEstadistica,
+  formatearErrorApi,
   logErrorApi,
   listarNivelesEducativos,
+  listarSexo,
+  listarZona,
+  listarEtario,
+  listarRegion,
+  listarMunicipio,
   type CatalogoOpcion,
 } from "@/app/services/api";
+// import { detectarTipoDispositivo } from "@/lib/detectar-tipo-dispositivo";
 import {
-  OPCIONES_GRUPO_ETARIO,
-  OPCIONES_MUNICIPIO,
-  OPCIONES_SEXO,
-  OPCIONES_ZONA_REGION,
-  nombreOpcion,
-} from "@/lib/data/perfil-usuario-catalogos";
-import { leerNivelesEducativosCache } from "@/lib/offline/sync-catalogos";
+  leerNivelesEducativosCache,
+  leerSexoCache,
+  leerZonaCache,
+  leerEtarioCache,
+  leerRegionCache,
+  leerMunicipioCache,
+} from "@/lib/offline/sync-catalogos";
 import { saveUserProfile } from "@/lib/user-profile";
 import { formInputClass, formPrimaryButtonClass } from "./forms/form-styles";
 
@@ -26,14 +34,42 @@ type CatalogOnboardingFormProps = {
 export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps) {
   const [nivelId, setNivelId] = useState("");
   const [sexoId, setSexoId] = useState("");
-  const [grupoEtarioId, setGrupoEtarioId] = useState("");
+  const [sexos, setSexos] = useState<CatalogoOpcion[]>([]);
+  const [zonaId, setZonaId] = useState("");
+  const [zonas, setZonas] = useState<CatalogoOpcion[]>([]);
+  const [etarioId, setEtarioId] = useState("");
+  const [etarios, setEtario] = useState<CatalogoOpcion[]>([]);
   const [municipioId, setMunicipioId] = useState("");
-  const [zonaRegionId, setZonaRegionId] = useState("");
+  const [municipios, setMunicipios] = useState<CatalogoOpcion[]>([]);
+  const [regiones, setRegiones] = useState<CatalogoOpcion[]>([]);
 
   const [niveles, setNiveles] = useState<CatalogoOpcion[]>([]);
   const [cargandoNiveles, setCargandoNiveles] = useState(true);
+  const [cargandoSexo, setCargandoSexo] = useState(true);
+  const [cargandoZona, setCargandoZona] = useState(true);
+ 
+  const [cargandoEtario, setCargandoEtario] = useState(true);
+  const [cargandoRegion, setCargandoRegion] = useState(true);
+  const [cargandoMunicipio, setCargandoMunicipio] = useState(true);
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+ const [device, setDevice] = useState("");
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent;
+
+    if (/Android|iPhone|iPad|iPod/i.test(userAgent)) {
+      if (/iPad/i.test(userAgent)) {
+        setDevice("Tablet");
+      } else {
+        setDevice("Móvil");
+      }
+    } else {
+      setDevice("Desktop");
+    }
+  }, []);
+
 
   useEffect(() => {
     let cancel = false;
@@ -57,9 +93,128 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
     };
   }, []);
 
-  const guardar = useCallback(() => {
+
+    useEffect(() => {
+    let cancel = false;
+    setCargandoSexo(true);
+    (async () => {
+      try {
+        const list = await listarSexo();
+        // console.log(list);
+        if (!cancel) setSexos(list);
+      } catch (e) {
+        logErrorApi("Sexo (onboarding)", e);
+         const cached = await leerSexoCache();
+         if (!cancel) {
+          setSexos(cached.length > 0 ? cached : []);
+         }
+      } finally {
+        if (!cancel) setCargandoSexo(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+ useEffect(() => {
+    let cancel = false;
+    setCargandoZona(true);
+    (async () => {
+      try {
+        const list = await listarZona();
+        // console.log(list);
+        if (!cancel) setZonas(list);
+      } catch (e) {
+        logErrorApi("Zona (onboarding)", e);
+         const cached = await leerZonaCache();
+         if (!cancel) {
+          setZonas(cached.length > 0 ? cached : []);
+         }
+      } finally {
+        if (!cancel) setCargandoZona(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+useEffect(() => {
+    let cancel = false;
+    setCargandoEtario(true);
+    (async () => {
+      try {
+        const list = await listarEtario();
+        // console.log(list);
+        if (!cancel) setEtario(list);
+      } catch (e) {
+        logErrorApi("Etario (onboarding)", e);
+         const cached = await leerEtarioCache();
+         if (!cancel) {
+          setEtario(cached.length > 0 ? cached : []);
+         }
+      } finally {
+        if (!cancel) setCargandoEtario(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancel = false;
+    setCargandoRegion(true);
+    (async () => {
+      try {
+        const list = await listarRegion();
+        // console.log(list);
+        if (!cancel) setRegiones(list);
+      } catch (e) {
+        logErrorApi("Region (onboarding)", e);
+         const cached = await leerRegionCache();
+         if (!cancel) {
+          setRegiones(cached.length > 0 ? cached : []);
+         }
+      } finally {
+        if (!cancel) setCargandoRegion(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+
+useEffect(() => {
+    let cancel = false;
+    setCargandoMunicipio(true);
+    (async () => {
+      try {
+        const list = await listarMunicipio();
+        // console.log(list);
+        if (!cancel) setMunicipios(list);
+      } catch (e) {
+        logErrorApi("Municipio (onboarding)", e);
+         const cached = await leerMunicipioCache();
+         if (!cancel) {
+          setMunicipios(cached.length > 0 ? cached : []);
+         }
+      } finally {
+        if (!cancel) setCargandoMunicipio(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+
+
+  const guardar = useCallback(async () => {
     setErrorForm(null);
-    if (!nivelId || !sexoId || !grupoEtarioId || !municipioId || !zonaRegionId) {
+    if (!nivelId || !sexoId || !municipioId || !etarioId || !zonaId) {
       setErrorForm("Selecciona una opción en cada campo para continuar.");
       return;
     }
@@ -68,34 +223,73 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
       setErrorForm("Selecciona un nivel académico válido.");
       return;
     }
+    const sexo = sexos.find((n) => n.id === sexoId);
+    if (!sexo) {
+      setErrorForm("Selecciona el sexo válido.");
+      return;
+    }
+    const zona = zonas.find((n) => n.id === zonaId);
+    if (!zona) {
+      setErrorForm("Selecciona una zona válida.");
+      return;
+    }
+    const etario = etarios.find((n) => n.id === etarioId);
+    if (!etario) {
+      setErrorForm("Selecciona el rango etario válido.");
+      return;
+    }
+    const municipio = municipios.find((n) => n.id === municipioId);
+    if (!municipio) {
+      setErrorForm("Selecciona un municipio válido.");
+      return;
+    }
+
+    const nivelNum = Number(nivel.id);
+    const sexoNum = Number(sexo.id);
+    const etarioNum = Number(etario.id);
+    const zonaNum = Number(zona.id);
+    const municipioNum = Number(municipio.id);
 
     setGuardando(true);
     try {
+      await crearEstadistica({
+        tipodispositivo:device , //detectarTipoDispositivo(),
+        idNivelEducativo: nivelNum,
+        idSexo: sexoNum,
+        idEtario: etarioNum,
+        idZona: zonaNum,
+        munpol: municipioNum,
+      });
+
       saveUserProfile({
-        nivelAcademicoId: nivel.id,
+        nivelAcademicoId: nivelNum,
         nivelAcademicoNombre: nivel.nombre,
-        sexoId,
-        sexoNombre: nombreOpcion(OPCIONES_SEXO, sexoId),
-        grupoEtarioId,
-        grupoEtarioNombre: nombreOpcion(OPCIONES_GRUPO_ETARIO, grupoEtarioId),
-        municipioId,
-        municipioNombre: nombreOpcion(OPCIONES_MUNICIPIO, municipioId),
-        zonaRegionId,
-        zonaRegionNombre: nombreOpcion(OPCIONES_ZONA_REGION, zonaRegionId),
+        sexoId: sexoNum,
+        sexoNombre: sexo.nombre,
+        grupoEtarioId: etarioNum,
+        grupoEtarioNombre: etario.nombre,
+        municipioId: municipioNum,
+        municipioNombre: municipio.nombre,
+        zonaRegionId: zonaNum,
+        zonaRegionNombre: zona.nombre,
       });
       onComplete();
     } catch (e) {
-      setErrorForm(e instanceof Error ? e.message : "No se pudo guardar el perfil.");
+      setErrorForm(formatearErrorApi(e));
     } finally {
       setGuardando(false);
     }
   }, [
     nivelId,
     sexoId,
-    grupoEtarioId,
+    etarioId,
     municipioId,
-    zonaRegionId,
+    zonaId,
     niveles,
+    sexos,
+    etarios,
+    zonas,
+    municipios,
     onComplete,
   ]);
 
@@ -153,7 +347,7 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
           onChange={setSexoId}
           placeholder="Seleccione sexo"
         >
-          {OPCIONES_SEXO.map((o) => (
+          {sexos.map((o) => (
             <option key={o.id} value={o.id}>
               {o.nombre}
             </option>
@@ -163,11 +357,11 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
         <SelectField
           id="grupo-etario"
           label="Grupo etario"
-          value={grupoEtarioId}
-          onChange={setGrupoEtarioId}
+          value={etarioId}
+          onChange={setEtarioId}
           placeholder="Seleccione grupo etario"
         >
-          {OPCIONES_GRUPO_ETARIO.map((o) => (
+          {etarios.map((o) => (
             <option key={o.id} value={o.id}>
               {o.nombre}
             </option>
@@ -181,7 +375,7 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
           onChange={setMunicipioId}
           placeholder="Seleccione municipio"
         >
-          {OPCIONES_MUNICIPIO.map((o) => (
+          {municipios.map((o) => (
             <option key={o.id} value={o.id}>
               {o.nombre}
             </option>
@@ -189,13 +383,13 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
         </SelectField>
 
         <SelectField
-          id="zona-region"
-          label="Zona o región"
-          value={zonaRegionId}
-          onChange={setZonaRegionId}
-          placeholder="Seleccione zona o región"
+          id="zona"
+          label="Zona"
+          value={zonaId}
+          onChange={setZonaId}
+          placeholder="Seleccione la zona"
         >
-          {OPCIONES_ZONA_REGION.map((o) => (
+          {zonas.map((o) => (
             <option key={o.id} value={o.id}>
               {o.nombre}
             </option>
@@ -204,7 +398,7 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
       </div>
 
       <button
-        type="button"
+        type="submit"
         onClick={guardar}
         disabled={guardando || cargandoNiveles || niveles.length === 0}
         className={`${formPrimaryButtonClass} mt-5 bg-[#d81b60] hover:opacity-95`}

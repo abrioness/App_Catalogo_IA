@@ -6,12 +6,14 @@ import axios, {
 } from "axios";
 import { enriquecerHerramientasCatalogo } from "@/lib/enriquecer-herramientas-catalogo";
 import type {
-  CategoriaCatalogo,
+  CategoriaCatalogo,  
   HerramientaCatalogo,
+  
   ModeloPrecio,
   Plataforma,
 } from "../../lib/types/herramienta";
 import type { TblCatCategoriaApi } from "../../lib/types/categoria-api";
+import type {EstadisticaCatalogo} from "../../lib/types/estadisticas"
 import {
   API_ROUTES,
   apiPath,
@@ -19,6 +21,7 @@ import {
   getApiBaseUrlLabel,
 } from "../constants/api";
 import { getToken } from "./auth";
+import { convertSegmentPathToStaticExportFilename } from "next/dist/shared/lib/segment-cache/segment-value-encoding";
 
 /** Valor por defecto de `usuarioRegistro` en altas desde el formulario. */
 const DEFAULT_USUARIO_REGISTRO = 1;
@@ -180,6 +183,117 @@ export async function listarCompatibilidad(): Promise<CatalogoOpcion[]> {
   return out;
 }
 
+
+function extraerFilaSexo(body: unknown): Record<string, unknown> | null {
+  if (body == null || typeof body !== "object") return null;
+  const o = body as Record<string, unknown>;
+  if (o.data != null && typeof o.data === "object" && !Array.isArray(o.data)) {
+    
+    return o.data as Record<string, unknown>;
+  }
+  if (o.sexo != null && typeof o.sexo === "object" && !Array.isArray(o.sexo)) {
+    
+    return o.sexo as Record<string, unknown>;
+  }
+  return o;
+}
+
+function sexoDesdeApi(raw: unknown): CatalogoOpcion | null {
+  const row = extraerFilaSexo(raw);
+  if (!row) return null;
+
+  const id =
+    row.IdSexo ?? row.idSexo ?? row.id_sexo ?? row.id ?? row.pk;
+  const nombre = row.Sexo ?? row.sexo ?? row.nombre ?? row.Nombre;
+
+  if (id == null || nombre == null) return null;
+
+  const idStr = String(id).trim();
+  const nom = String(nombre).trim();
+  if (!idStr || !nom) return null;
+
+  return { id: idStr, nombre: nom };
+}
+
+function etarioDesdeApi(raw: unknown): CatalogoOpcion | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const id =
+    o.idetario ?? o.IdEtario ?? o.id_etario ?? o.id ?? o.pk;
+  const nombre = o.rangoetario ?? o.RangoEtario?? o.Rangoetario;
+  if (id == null || nombre == null) return null;
+  const nom = String(nombre).trim();
+  if (!nom) return null;
+  return { id: String(id).trim(), nombre: nom };
+}
+
+export async function listarEtario(): Promise<CatalogoOpcion[]> {
+  const rutas = [
+    API_ROUTES.etario,
+    apiPath("/Etario/"),
+    apiPath("/TblEtario/"),
+  ];
+
+  for (const ruta of rutas) {
+    try {
+      const { data } = await apiClient.get<unknown>(ruta);
+      const arr = asArray<unknown>(data);
+      const out: CatalogoOpcion[] = [];
+      for (const item of arr) {
+        const s = etarioDesdeApi(item);
+        if (s) out.push(s);
+      }
+      if (out.length > 0) return out;
+    } catch {
+      /* probar siguiente ruta */
+    }
+  }
+
+  throw new Error(
+    "No se pudo cargar el catálogo de etario. Registra la ruta api/Etario/ en Django (ver backend-django-patch/etario_view.py).",
+  );
+}
+
+function regionDesdeApi(raw: unknown): CatalogoOpcion | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const id =
+    o.idregion ?? o.IdRegion ?? o.id_region ?? o.id ?? o.pk;
+  const nombre = o.nombreregion ?? o.NombreRegion?? o.Nombreregion;
+  if (id == null || nombre == null) return null;
+  const nom = String(nombre).trim();
+  if (!nom) return null;
+  return { id: String(id).trim(), nombre: nom };
+}
+
+export async function listarRegion(): Promise<CatalogoOpcion[]> {
+  const rutas = [
+    API_ROUTES.region,
+    apiPath("/Region/"),
+    apiPath("/TblRegion/"),
+  ];
+
+  for (const ruta of rutas) {
+    try {
+      const { data } = await apiClient.get<unknown>(ruta);
+      const arr = asArray<unknown>(data);
+      const out: CatalogoOpcion[] = [];
+      for (const item of arr) {
+        const s = regionDesdeApi(item);
+        if (s) out.push(s);
+      }
+      if (out.length > 0) return out;
+    } catch {
+      /* probar siguiente ruta */
+    }
+  }
+
+  throw new Error(
+    "No se pudo cargar el catálogo de etario. Registra la ruta api/Etario/ en Django (ver backend-django-patch/etario_view.py).",
+  );
+}
+
+
 function funcionDesdeApi(raw: unknown): CatalogoOpcion | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -203,6 +317,51 @@ export async function listarFuncionesPrincipales(): Promise<CatalogoOpcion[]> {
   return out;
 }
 
+
+
+function municipioDesdeApi(raw: unknown): CatalogoOpcion | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const id =
+    o.munpol ?? o.Munpol ?? o.id_munpol ?? o.IdMunpol ?? o.pk;
+  const nombre = o.anomMun ?? o.AnomMun ?? o.anommun;
+  if (id == null || nombre == null) return null;
+  const nom = String(nombre).trim();
+  if (!nom) return null;
+  return { id: String(id).trim(), nombre: nom };
+}
+
+/** Listado de sexo desde Django (`/api/Sexo/`). */
+export async function listarMunicipio(): Promise<CatalogoOpcion[]> {
+  const { data } = await apiClient.get<unknown>(API_ROUTES.municipio);
+  const arr = asArray<unknown>(data);
+  
+  const out: CatalogoOpcion[] = [];
+//  console.log("HOLA");
+  for (const item of arr) {
+    const c = municipioDesdeApi(item);      
+    if (c) out.push(c);
+  }
+ 
+  return out;
+}
+
+/** Listado de sexo desde Django (`/api/Sexo/`). */
+export async function listarSexo(): Promise<CatalogoOpcion[]> {
+  const { data } = await apiClient.get<unknown>(API_ROUTES.sexo);
+  const arr = asArray<unknown>(data);
+  
+  const out: CatalogoOpcion[] = [];
+//  console.log("HOLA");
+  for (const item of arr) {
+    const c = sexoDesdeApi(item);      
+    if (c) out.push(c);
+  }
+ 
+  return out;
+}
+
+
 function nivelDesdeApi(raw: unknown): CatalogoOpcion | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -221,6 +380,31 @@ export async function listarNivelesEducativos(): Promise<CatalogoOpcion[]> {
   const out: CatalogoOpcion[] = [];
   for (const item of arr) {
     const c = nivelDesdeApi(item);
+    // console.log(c);
+    if (c) out.push(c);
+  }
+  return out;
+}
+
+function zonaDesdeApi(raw: unknown): CatalogoOpcion | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const id =
+    o.idZona ?? o.IdZona ?? o.id_zona ?? o.id ?? o.pk;
+  const nombre = o.nombreZona ?? o.NombreZona ?? o.nombre_zona;
+  if (id == null || nombre == null) return null;
+  const nom = String(nombre).trim();
+  if (!nom) return null;
+  return { id: String(id).trim(), nombre: nom };
+}
+
+export async function listarZona(): Promise<CatalogoOpcion[]> {
+  const { data } = await apiClient.get<unknown>(API_ROUTES.zona);
+  const arr = asArray<unknown>(data);
+  const out: CatalogoOpcion[] = [];
+  for (const item of arr) {
+    const c = zonaDesdeApi(item);
+    // console.log(c);
     if (c) out.push(c);
   }
   return out;
@@ -322,6 +506,12 @@ function asNiveles(v: unknown): string[] {
     return v.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
   return [];
 }
+// function asSexos(v: unknown): string[] {
+//   if (Array.isArray(v)) return v.map(String).filter(Boolean);
+//   if (typeof v === "string" && v.trim())
+//     return v.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+//   return [];
+// }
 
 function idDesdeValor(v: unknown): string | null {
   if (v == null) return null;
@@ -643,6 +833,7 @@ export function normalizarHerramientaApi(raw: unknown): HerramientaCatalogo | nu
   if (id == null || nombre == null) return null;
   const categoriaId = categoriaIdDesdeApi(r);
   const categoriaNombre = categoriaNombreDesdeApi(r) || "—";
+  
   const compatibilidadIds = compatibilidadIdsDesdeApi(r);
   const compatibilidadNombres = compatibilidadNombresDesdeApi(r);
   const funcionesPrincipales = funcionesPrincipalesNombresDesdeApi(r);
@@ -710,6 +901,102 @@ export function normalizarHerramientaApi(raw: unknown): HerramientaCatalogo | nu
 export type ListarHerramientasParams = {
   categoriaId?: string;
   compatibilidadId?: string;
+  q?: string;
+};
+
+
+function extraerFilaEstadistica(body: unknown): Record<string, unknown> | null {
+  if (body == null || typeof body !== "object") return null;
+  const looksLike = (r: Record<string, unknown>): boolean => {
+    const id =
+      r.id ??
+      r.idEstadistica ??
+      r.IdEstadistica ??
+      r.id_estadistica ??
+      r.pk;
+    const nom =
+      r.tipodispositivo ??
+      r.tipoDispositivo ??
+      r.TipoDispositivo ??
+      r.tipo_dispositivo;
+    return (
+      id != null &&
+      String(id).trim() !== "" &&
+      nom != null &&
+      String(nom).trim() !== ""
+    );
+  };
+  const asObj = (x: unknown): Record<string, unknown> | null =>
+    x && typeof x === "object" && !Array.isArray(x)
+      ? (x as Record<string, unknown>)
+      : null;
+  const tryOne = (x: unknown): Record<string, unknown> | null => {
+    const r = asObj(x);
+    return r && looksLike(r) ? r : null;
+  };
+
+  const direct = tryOne(body);
+  if (direct) return direct;
+
+  const o = asObj(body);
+  if (!o) return null;
+  for (const key of ["data", "estadistica", "entity", "result", "item"] as const) {
+    const nested = tryOne(o[key]);
+    if (nested) return nested;
+  }
+  if (Array.isArray(body) && body.length > 0) {
+    return tryOne(body[0]);
+  }
+  return null;
+}
+
+
+
+/** Adapta filas del API al tipo usado en la UI. */
+export function normalizarEstadisticaApi(raw: unknown): EstadisticaCatalogo | null {
+  if (!raw || typeof raw !== "object") return null;
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) return null;
+    return normalizarEstadisticaApi(raw[0]);
+  }
+  const r = raw as Record<string, unknown>;
+  const id =
+    r.id ?? r.idEstadistica ?? r.IdEstadistica ?? r.id_Estadistica ?? r.pk;
+  const tipodispositivo =
+    r.tipodispositivo ?? r.tipoDispositivo ?? r.TipoDispositivo ?? r.tipo_dispositivo;
+  if (id == null || tipodispositivo == null) return null;
+  const idFk = (keys: string[]): number | undefined => {
+    for (const key of keys) {
+      const v = r[key];
+      if (v != null && String(v).trim() !== "") return Number(v);
+    }
+    return undefined;
+  };
+
+  const nivelId = nivelDesdeApi(r);
+  const etarioId = etarioDesdeApi(r);
+  const sexoId = sexoDesdeApi(r);
+  const zonaId = zonaDesdeApi(r);
+  const munpol = municipioDesdeApi(r);
+
+  return {
+    idestadistica: String(id),
+    tipodispositivo: String(tipodispositivo).trim(),
+    idniveleducativo:
+      idFk(["IdNivelEducativo", "idNivelEducativo", "idsNivelEducativo"]) ??
+      Number(nivelId?.id),
+    idsexo: idFk(["IdSexo", "idSexo", "idsSexo"]) ?? Number(sexoId?.id),
+    idzona: idFk(["IdZona", "idZona", "idsZona"]) ?? Number(zonaId?.id),
+    idetario: idFk(["IdEtario", "idEtario", "idsEtario"]) ?? Number(etarioId?.id),
+    munpol: idFk(["Munpol", "munpol", "IdMunpol", "idsMunpol"]) ?? Number(munpol?.id),
+  };
+}
+
+export type ListarEstadisticaParams = {
+  nivelEducativoId?: string;
+  grupoEtarioId?: string;
+  sexoId?: string;
+  Id?: string;
   q?: string;
 };
 
@@ -975,6 +1262,8 @@ export async function crearTipoUso(
   return {};
 }
 
+
+
 /** Alta de herramienta alineada con `CreateHerramientaDto` en Nest. */
 export type CrearHerramientaPayload = {
   nombre: string;
@@ -997,7 +1286,6 @@ export async function crearHerramienta(
   const usuarioRegistro = payload.usuarioRegistro ?? DEFAULT_USUARIO_REGISTRO;
   const fechaRegistro = new Date().toISOString().slice(0, 10);
   const activo = payload.activo ?? true;
-
   const body: Record<string, unknown> = {
     nombreHerramienta: payload.nombre.trim(),
     descripcion: payload.descripcionCorta.trim(),
@@ -1025,6 +1313,99 @@ export async function crearHerramienta(
   }
   return created;
 }
+
+
+/**Alta de Estadistica */
+
+/** Alta de estadística (onboarding / registro de uso). */
+export type CrearEstadisticaPayload = {
+  tipodispositivo: string;
+  idNivelEducativo: number;
+  idEtario: number;
+  idSexo: number;
+  idZona: number;
+  munpol: number;
+  usuarioRegistro?: number;
+  activo?: boolean;
+};
+
+function estadisticaDesdePayload(
+  payload: CrearEstadisticaPayload,
+  id?: string | number,
+): EstadisticaCatalogo {
+  return {
+    idestadistica: id != null ? String(id) : "0",
+    tipodispositivo: payload.tipodispositivo.trim(),
+    idniveleducativo: payload.idNivelEducativo,
+    idetario: payload.idEtario,
+    idsexo: payload.idSexo,
+    idzona: payload.idZona,
+    munpol: payload.munpol,
+  };
+}
+
+export async function crearEstadistica(
+  payload: CrearEstadisticaPayload,
+) {
+
+  try{
+  const usuarioRegistro = payload.usuarioRegistro ?? DEFAULT_USUARIO_REGISTRO;
+  const fechaRegistro = new Date().toISOString().slice(0, 10);
+  const activo = payload.activo ?? true;
+  const body = {
+    TipoDispositivo: payload.tipodispositivo.trim(),
+    NivelEducativo: payload.idNivelEducativo,
+    Etario: payload.idEtario,
+    Sexo: payload.idSexo,
+    Zona: payload.idZona,
+    Munpol: payload.munpol,
+    Activo: activo,
+    UsuarioRegistro: usuarioRegistro,
+    FechaRegistro: fechaRegistro,
+  };
+  console.log('Respuesta al crear estadisticas 1+++:', body);
+  const response= await apiClient.post(API_ROUTES.estadistica, body);
+  //  const root = asRecord<unknown>(data) ?? data;
+  //  console.log('Respuesta al crear estadisticas 2+++:', data);
+  // const created = normalizarEstadisticaApi(extraerFilaEstadistica(root) ?? root);
+  // if (created) 
+  //   return created;
+  
+  // const fila: Record<string, unknown> | null =
+  //   extraerFilaEstadistica(root) ?? asRecord<Record<string, unknown>>(root);
+  // const id =
+  //   fila?.id ??
+  //   fila?.IdEstadistica ??
+  //   fila?.idEstadistica ??
+  //   fila?.pk;
+  // if (id != null) return estadisticaDesdePayload(payload, String(id));
+
+  // return estadisticaDesdePayload(payload);
+   return response.data;
+    }
+   catch (error) {
+   console.error('Error al crear datos de estadistica:', error);
+    throw error;
+  }
+}
+
+/**
+ * Crea un nuevo contenido
+ * @param payload Datos del contenido a crear
+ * @returns Promise con la respuesta del servidor
+ */
+// export const crearEstadistica = async (payload: any): Promise<any> => {
+//   try {
+//     console.log('Respuesta al crear estadistica 1+++:', payload);
+//     const {data} = await apiClient.post(API_ROUTES.estadistica, payload);
+//     console.log('Respuesta al crear estadistica:', data);
+//     return data;
+//   } catch (error) {
+//     console.error('Error al crear Estadistica:', error);
+//     throw error;
+//   }
+// };
+
 
 /** Alias heredado; preferir `listarCategorias`. */
 export const getCategoria = listarCategorias;
@@ -1056,14 +1437,14 @@ function mensajeApiCompleto(d: unknown): string | null {
     push(msg);
   }
 
-  if (typeof o.description === "string") push(o.description);
-  /** Detalle/hint de PostgreSQL expuestos por algunos filtros de excepción */
-  if (typeof o.detail === "string") push(`Detalle BD: ${o.detail}`);
-  if (typeof o.hint === "string") push(`Sugerencia: ${o.hint}`);
-  if (typeof o.constraint === "string") push(`Restricción: ${o.constraint}`);
-  if (typeof o.column === "string") push(`Columna: ${o.column}`);
-  if (typeof o.table === "string") push(`Tabla: ${o.table}`);
-  if (typeof o.details === "string") push(o.details);
+  // if (typeof o.description === "string") push(o.description);
+  // /** Detalle/hint de PostgreSQL expuestos por algunos filtros de excepción */
+  // if (typeof o.detail === "string") push(`Detalle BD: ${o.detail}`);
+  // if (typeof o.hint === "string") push(`Sugerencia: ${o.hint}`);
+  // if (typeof o.constraint === "string") push(`Restricción: ${o.constraint}`);
+  // if (typeof o.column === "string") push(`Columna: ${o.column}`);
+  // if (typeof o.table === "string") push(`Tabla: ${o.table}`);
+  // if (typeof o.details === "string") push(o.details);
 
   const errLabel = o.error;
   if (typeof errLabel === "string" && errLabel.trim()) {

@@ -5,7 +5,12 @@ import {
   listarFuncionesPrincipales,
   listarHerramientas,
   listarNivelesEducativos,
+  listarSexo,
+  listarZona,
+  listarEtario,
   listarTiposUso,
+  listarRegion,
+  listarMunicipio,
   type CatalogoOpcion,
 } from "@/app/services/api";
 import type { CategoriaCatalogo, HerramientaCatalogo } from "@/lib/types/herramienta";
@@ -31,6 +36,11 @@ export type SyncCatalogosResult =
         funcionesPrincipales: number;
         nivelesEducativos: number;
         tiposUso: number;
+        sexo:number;
+        zona:number;
+        etario:number;
+        region:number;
+        municipio:number;
         herramientas: number;
       };
     }
@@ -54,20 +64,37 @@ export async function sincronizarCatalogosCompletos(): Promise<SyncCatalogosResu
       funcionesPrincipales,
       nivelesEducativos,
       tiposUso,
+      sexo,
+      zona,
+      etario,
+      region,
+      municipio,
       herramientas,
     ] = await Promise.all([
       listarCategorias(),
       listarCompatibilidad(),
       listarFuncionesPrincipales(),
       listarNivelesEducativos(),
+      listarSexo(),
+      listarZona(),
+      listarEtario(),
+      listarRegion(),
+      listarMunicipio(),
       listarTiposUso(),
       listarHerramientas(),
+
+      
     ]);
 
     const lastSyncedAt = new Date().toISOString();
     await idbSet(CACHE_KEYS.categorias, categorias);
     await idbSet(CACHE_KEYS.compatibilidades, compatibilidades);
     await idbSet(CACHE_KEYS.funcionesPrincipales, funcionesPrincipales);
+    await idbSet(CACHE_KEYS.sexo,sexo);
+    await idbSet(CACHE_KEYS.zona,zona);
+    await idbSet(CACHE_KEYS.etario,etario);
+    await idbSet(CACHE_KEYS.region,region);
+    await idbSet(CACHE_KEYS.municipio,municipio);
     await idbSet(CACHE_KEYS.nivelesEducativos, nivelesEducativos);
     await idbSet(CACHE_KEYS.tiposUso, tiposUso);
     await idbSet(CACHE_KEYS.herramientas, herramientas);
@@ -83,6 +110,11 @@ export async function sincronizarCatalogosCompletos(): Promise<SyncCatalogosResu
       counts: {
         categorias: categorias.length,
         compatibilidades: compatibilidades.length,
+        sexo: sexo.length,
+        zona:zona.length,
+        etario:etario.length,
+        region:region.length,
+        municipio:municipio.length,
         funcionesPrincipales: funcionesPrincipales.length,
         nivelesEducativos: nivelesEducativos.length,
         tiposUso: tiposUso.length,
@@ -109,6 +141,36 @@ export async function leerCompatibilidadesCache(): Promise<CatalogoOpcion[]> {
 export async function leerNivelesEducativosCache(): Promise<CatalogoOpcion[]> {
   if (!isIndexedDbAvailable()) return [];
   const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.nivelesEducativos);
+  return Array.isArray(v) ? v : [];
+}
+
+export async function leerSexoCache(): Promise<CatalogoOpcion[]> {
+  if (!isIndexedDbAvailable()) return [];
+  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.sexo);
+  return Array.isArray(v) ? v : [];
+}
+
+export async function leerZonaCache(): Promise<CatalogoOpcion[]> {
+  if (!isIndexedDbAvailable()) return [];
+  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.zona);
+  return Array.isArray(v) ? v : [];
+}
+
+export async function leerEtarioCache(): Promise<CatalogoOpcion[]> {
+  if (!isIndexedDbAvailable()) return [];
+  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.etario);
+  return Array.isArray(v) ? v : [];
+}
+
+export async function leerRegionCache(): Promise<CatalogoOpcion[]> {
+  if (!isIndexedDbAvailable()) return [];
+  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.region);
+  return Array.isArray(v) ? v : [];
+}
+
+export async function leerMunicipioCache(): Promise<CatalogoOpcion[]> {
+  if (!isIndexedDbAvailable()) return [];
+  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.municipio);
   return Array.isArray(v) ? v : [];
 }
 
