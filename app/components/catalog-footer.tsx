@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export function CatalogFooter() {
   return (
-    <footer className="mt-auto w-full bg-gradient-to-r from-[#d81b60] to-[#7b1fa2] px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-8 text-center text-white">
+    <footer className="mt-auto w-full bg-gradient-to-r from-[#08527F] to-[#09A6D1] px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-8 text-center text-white">
        <div className="mx-auto my-6 max-w-xs border border-white/40 rounded-lg px-4 py-3 text-xs font-medium tracking-wide">
        <Image
       src="/Imagenes/institucioneseducativas.jpg"// Ruta desde /public

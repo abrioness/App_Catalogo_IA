@@ -9,7 +9,7 @@ import {
   listarZona,
   listarEtario,
   listarTiposUso,
-  listarRegion,
+  // listarRegion,
   listarMunicipio,
   type CatalogoOpcion,
 } from "@/app/services/api";
@@ -39,7 +39,7 @@ export type SyncCatalogosResult =
         sexo:number;
         zona:number;
         etario:number;
-        region:number;
+        // region:number;
         municipio:number;
         herramientas: number;
       };
@@ -67,7 +67,7 @@ export async function sincronizarCatalogosCompletos(): Promise<SyncCatalogosResu
       sexo,
       zona,
       etario,
-      region,
+      // region,
       municipio,
       herramientas,
     ] = await Promise.all([
@@ -78,7 +78,7 @@ export async function sincronizarCatalogosCompletos(): Promise<SyncCatalogosResu
       listarSexo(),
       listarZona(),
       listarEtario(),
-      listarRegion(),
+      // listarRegion(),
       listarMunicipio(),
       listarTiposUso(),
       listarHerramientas(),
@@ -93,7 +93,7 @@ export async function sincronizarCatalogosCompletos(): Promise<SyncCatalogosResu
     await idbSet(CACHE_KEYS.sexo,sexo);
     await idbSet(CACHE_KEYS.zona,zona);
     await idbSet(CACHE_KEYS.etario,etario);
-    await idbSet(CACHE_KEYS.region,region);
+    // await idbSet(CACHE_KEYS.region,region);
     await idbSet(CACHE_KEYS.municipio,municipio);
     await idbSet(CACHE_KEYS.nivelesEducativos, nivelesEducativos);
     await idbSet(CACHE_KEYS.tiposUso, tiposUso);
@@ -113,7 +113,7 @@ export async function sincronizarCatalogosCompletos(): Promise<SyncCatalogosResu
         sexo: sexo.length,
         zona:zona.length,
         etario:etario.length,
-        region:region.length,
+        // region:region.length,
         municipio:municipio.length,
         funcionesPrincipales: funcionesPrincipales.length,
         nivelesEducativos: nivelesEducativos.length,
@@ -162,11 +162,11 @@ export async function leerEtarioCache(): Promise<CatalogoOpcion[]> {
   return Array.isArray(v) ? v : [];
 }
 
-export async function leerRegionCache(): Promise<CatalogoOpcion[]> {
-  if (!isIndexedDbAvailable()) return [];
-  const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.region);
-  return Array.isArray(v) ? v : [];
-}
+// export async function leerRegionCache(): Promise<CatalogoOpcion[]> {
+//   if (!isIndexedDbAvailable()) return [];
+//   const v = await idbGet<CatalogoOpcion[]>(CACHE_KEYS.region);
+//   return Array.isArray(v) ? v : [];
+// }
 
 export async function leerMunicipioCache(): Promise<CatalogoOpcion[]> {
   if (!isIndexedDbAvailable()) return [];

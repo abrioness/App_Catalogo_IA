@@ -6,7 +6,11 @@ const config: CapacitorConfig = {
   /** Carpeta generada por `next build` con `output: "export"` (contiene `index.html`). */
   webDir: "out",
   server: {
-  androidScheme: "http"
+  // androidScheme: "http"
+
+  // url:'http://10.0.2.2:3000',
+   cleartext: true
+
 }
 };
 

@@ -1,3 +1,4 @@
+import axios from "axios";
 import { create } from "domain";
 
 /**
@@ -48,9 +49,18 @@ export function getApiBaseUrl(): string {
   if (expo) return stripTrailingSlash(expo);
 
   // return "http://10.228.210.160:3002";
-  // return "http://10.228.210.160:8000";
-return "http://localhost:8000";
+  return "http://10.228.210.160:8000";
+// return "http://localhost:8000";
 }
+const url = `${getApiBaseUrl()}/api/Herramienta/`;
+
+console.log("URL", url);
+
+const response = await axios.get(url);
+
+console.log("DATA", response.data);
+
+// setHerramientas(response.data);
 
 /** Misma URL que `getApiBaseUrl()`; útil para mostrarla en mensajes de error. */
 export function getApiBaseUrlLabel(): string {
@@ -91,9 +101,9 @@ export const API_ROUTES = {
   get zona() {
     return apiPath("/Zona/");
   },
-  get region() {
-    return apiPath("/Region/");
-  },
+  // get region() {
+  //   return apiPath("/Region/");
+  // },
   get municipio() {
     return apiPath("/Municipio/");
   },
@@ -104,3 +114,7 @@ export const API_ROUTES = {
 
   
 } as const;
+function setHerramientas(data: any) {
+  throw new Error("Function not implemented.");
+}
+

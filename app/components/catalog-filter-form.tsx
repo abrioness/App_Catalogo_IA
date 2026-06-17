@@ -241,14 +241,15 @@ function CatalogFilterFormInner({ onApply }: CatalogFilterFormProps) {
             htmlFor="busqueda"
             className="mb-1.5 block text-sm font-medium text-neutral-900"
           >
-            ¿Qué pretendes hacer?
+            {/* ¿Qué pretendes hacer? */}
+            Buscar por nombre o función
           </label>
           <input
             id="busqueda"
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre o función…"
+            placeholder="Ejemplo:  Canva ó Redacción"
             className={inputClass}
             autoComplete="off"
           />

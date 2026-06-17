@@ -9,7 +9,7 @@ import {
   listarSexo,
   listarZona,
   listarEtario,
-  listarRegion,
+  // listarRegion,
   listarMunicipio,
   type CatalogoOpcion,
 } from "@/app/services/api";
@@ -19,7 +19,7 @@ import {
   leerSexoCache,
   leerZonaCache,
   leerEtarioCache,
-  leerRegionCache,
+  // leerRegionCache,
   leerMunicipioCache,
 } from "@/lib/offline/sync-catalogos";
 import { saveUserProfile } from "@/lib/user-profile";
@@ -41,19 +41,16 @@ export function CatalogOnboardingForm({ onComplete }: CatalogOnboardingFormProps
   const [etarios, setEtario] = useState<CatalogoOpcion[]>([]);
   const [municipioId, setMunicipioId] = useState("");
   const [municipios, setMunicipios] = useState<CatalogoOpcion[]>([]);
-  const [regiones, setRegiones] = useState<CatalogoOpcion[]>([]);
-
+  // const [regiones, setRegiones] = useState<CatalogoOpcion[]>([]);
   const [niveles, setNiveles] = useState<CatalogoOpcion[]>([]);
   const [cargandoNiveles, setCargandoNiveles] = useState(true);
   const [cargandoSexo, setCargandoSexo] = useState(true);
-  const [cargandoZona, setCargandoZona] = useState(true);
- 
+  const [cargandoZona, setCargandoZona] = useState(true); 
   const [cargandoEtario, setCargandoEtario] = useState(true);
-  const [cargandoRegion, setCargandoRegion] = useState(true);
+  // const [cargandoRegion, setCargandoRegion] = useState(true);
   const [cargandoMunicipio, setCargandoMunicipio] = useState(true);
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-
  const [device, setDevice] = useState("");
 
   useEffect(() => {
@@ -163,28 +160,28 @@ useEffect(() => {
     };
   }, []);
 
-  useEffect(() => {
-    let cancel = false;
-    setCargandoRegion(true);
-    (async () => {
-      try {
-        const list = await listarRegion();
-        // console.log(list);
-        if (!cancel) setRegiones(list);
-      } catch (e) {
-        logErrorApi("Region (onboarding)", e);
-         const cached = await leerRegionCache();
-         if (!cancel) {
-          setRegiones(cached.length > 0 ? cached : []);
-         }
-      } finally {
-        if (!cancel) setCargandoRegion(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
+  // useEffect(() => {
+  //   let cancel = false;
+  //   setCargandoRegion(true);
+  //   (async () => {
+  //     try {
+  //       const list = await listarRegion();
+  //       // console.log(list);
+  //       if (!cancel) setRegiones(list);
+  //     } catch (e) {
+  //       logErrorApi("Region (onboarding)", e);
+  //        const cached = await leerRegionCache();
+  //        if (!cancel) {
+  //         setRegiones(cached.length > 0 ? cached : []);
+  //        }
+  //     } finally {
+  //       if (!cancel) setCargandoRegion(false);
+  //     }
+  //   })();
+  //   return () => {
+  //     cancel = true;
+  //   };
+  // }, []);
 
 
 useEffect(() => {

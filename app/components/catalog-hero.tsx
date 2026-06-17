@@ -92,7 +92,7 @@ export function CatalogHero() {
   return (
     <>
       <section
-        className="bg-gradient-to-b from-[#7b1fa2] via-[#9c27b0] to-[#d81b60] px-4 pb-8 pt-4 text-center text-white"
+        className="bg-gradient-to-b from-[#08527F] via-[#08527F] to-[#09A6D1] px-4 pb-8 pt-4 text-center text-white"
         aria-labelledby="hero-titulo-principal"
       >
         <p className="text-sm font-medium text-white/95">

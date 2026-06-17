@@ -45,7 +45,7 @@ type CatalogHeaderProps = {
 };
 
 export function CatalogHeader({
-  barClassName = "bg-[#7b1fa2]",
+  barClassName = "bg-[#DA477E]",
 }: CatalogHeaderProps) {
   return (
     <header

@@ -22,6 +22,7 @@ import {
 } from "../constants/api";
 import { getToken } from "./auth";
 import { convertSegmentPathToStaticExportFilename } from "next/dist/shared/lib/segment-cache/segment-value-encoding";
+import { act } from "react";
 
 /** Valor por defecto de `usuarioRegistro` en altas desde el formulario. */
 const DEFAULT_USUARIO_REGISTRO = 1;
@@ -254,44 +255,44 @@ export async function listarEtario(): Promise<CatalogoOpcion[]> {
   );
 }
 
-function regionDesdeApi(raw: unknown): CatalogoOpcion | null {
-  if (!raw || typeof raw !== "object") return null;
-  const o = raw as Record<string, unknown>;
-  const id =
-    o.idregion ?? o.IdRegion ?? o.id_region ?? o.id ?? o.pk;
-  const nombre = o.nombreregion ?? o.NombreRegion?? o.Nombreregion;
-  if (id == null || nombre == null) return null;
-  const nom = String(nombre).trim();
-  if (!nom) return null;
-  return { id: String(id).trim(), nombre: nom };
-}
+// function regionDesdeApi(raw: unknown): CatalogoOpcion | null {
+//   if (!raw || typeof raw !== "object") return null;
+//   const o = raw as Record<string, unknown>;
+//   const id =
+//     o.idregion ?? o.IdRegion ?? o.id_region ?? o.id ?? o.pk;
+//   const nombre = o.nombreregion ?? o.NombreRegion?? o.Nombreregion;
+//   if (id == null || nombre == null) return null;
+//   const nom = String(nombre).trim();
+//   if (!nom) return null;
+//   return { id: String(id).trim(), nombre: nom };
+// }
 
-export async function listarRegion(): Promise<CatalogoOpcion[]> {
-  const rutas = [
-    API_ROUTES.region,
-    apiPath("/Region/"),
-    apiPath("/TblRegion/"),
-  ];
+// export async function listarRegion(): Promise<CatalogoOpcion[]> {
+//   const rutas = [
+//     API_ROUTES.region,
+//     apiPath("/Region/"),
+//     apiPath("/TblRegion/"),
+//   ];
 
-  for (const ruta of rutas) {
-    try {
-      const { data } = await apiClient.get<unknown>(ruta);
-      const arr = asArray<unknown>(data);
-      const out: CatalogoOpcion[] = [];
-      for (const item of arr) {
-        const s = regionDesdeApi(item);
-        if (s) out.push(s);
-      }
-      if (out.length > 0) return out;
-    } catch {
-      /* probar siguiente ruta */
-    }
-  }
+//   for (const ruta of rutas) {
+//     try {
+//       const { data } = await apiClient.get<unknown>(ruta);
+//       const arr = asArray<unknown>(data);
+//       const out: CatalogoOpcion[] = [];
+//       for (const item of arr) {
+//         const s = regionDesdeApi(item);
+//         if (s) out.push(s);
+//       }
+//       if (out.length > 0) return out;
+//     } catch {
+//       /* probar siguiente ruta */
+//     }
+//   }
 
-  throw new Error(
-    "No se pudo cargar el catálogo de etario. Registra la ruta api/Etario/ en Django (ver backend-django-patch/etario_view.py).",
-  );
-}
+//   throw new Error(
+//     "No se pudo cargar el catálogo de region. Registra la ruta api/Region/ en Django (ver backend-django-patch/region_view.py).",
+//   );
+// }
 
 
 function funcionDesdeApi(raw: unknown): CatalogoOpcion | null {
@@ -787,12 +788,16 @@ function extraerFilaHerramienta(body: unknown): Record<string, unknown> | null {
       r.nombreHerramienta ??
       r.NombreHerramienta ??
       r.nombre_herramienta;
+    const Activo= r.activo ?? r.Activo;  
+  
     return (
       id != null &&
       String(id).trim() !== "" &&
       nom != null &&
-      String(nom).trim() !== ""
+      String(nom).trim() !== "" 
+     
     );
+  
   };
   const asObj = (x: unknown): Record<string, unknown> | null =>
     x && typeof x === "object" && !Array.isArray(x)
@@ -813,6 +818,7 @@ function extraerFilaHerramienta(body: unknown): Record<string, unknown> | null {
     if (nested) return nested;
   }
   if (Array.isArray(body) && body.length > 0) {
+    
     return tryOne(body[0]);
   }
   return null;
@@ -1057,6 +1063,7 @@ export async function listarHerramientas(
     listarCompatibilidad(),
     listarMatrizHerramientaCompatibilidad(),
   ]);
+
 
   const arr = asArray<unknown>(data);
   const out: HerramientaCatalogo[] = [];
@@ -1363,7 +1370,7 @@ export async function crearEstadistica(
     UsuarioRegistro: usuarioRegistro,
     FechaRegistro: fechaRegistro,
   };
-  console.log('Respuesta al crear estadisticas 1+++:', body);
+ 
   const response= await apiClient.post(API_ROUTES.estadistica, body);
   //  const root = asRecord<unknown>(data) ?? data;
   //  console.log('Respuesta al crear estadisticas 2+++:', data);
